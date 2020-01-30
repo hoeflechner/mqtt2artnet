@@ -1,0 +1,24 @@
+{
+  "name": "mqtt2artnet",
+  "version": "0.0.1",
+  "description": "",
+  "main": "mqtt2artnet.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hoeflechner/mqtt2artnet.git"
+  },
+  "author": "",
+  "license": "",
+  "bugs": {
+    "url": "https://github.com/hoeflechner/mqtt2artnet/issues"
+  },
+  "homepage": "https://github.com/hoeflechner/mqtt2artnet#readme",
+  "dependencies": {
+    "artnet": "^1.4.0",
+    "dmxnet": "^0.4.1",
+    "mqtt": "^3.0.0"
+  }
+}
