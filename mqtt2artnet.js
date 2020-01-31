@@ -1,8 +1,7 @@
 const mqtt = require("mqtt");
 const client = mqtt.connect("mqtt://10.10.0.12");
-//const artnet = require("artnet")({ host: "10.10.0.91" });
-
 const dmxlib = require("dmxnet");
+
 const dmxnet = new dmxlib.dmxnet({
   verbose: 0,
   oem: 0,
@@ -25,47 +24,52 @@ for (var i = 0; i < 512; i++) {
 }
 
 receiver.on("data", data => {
-  //console.log("REC: " + data);
   for (var i = 0; i < 512; i++) {
+    if ("value" in dmx[i]) {
+      if (dmx[i].value != data[i]) {
+        client.publish("/Artnet/" + i, data[i].toString());
+      }
+    } else {
+      client.publish("/Artnet/" + i, data[i].toString());
+    }
     dmx[i].value = data[i];
+    if ("realvalue" in dmx[i]) {
+      if (dmx[i].realvalue == data[i]) delete dmx[i].realvalue;
+    }
+    if (data[i] != 0) {
+      console.log("DMX" + i + JSON.stringify(dmx[i]));
+    }
   }
-  console.log("DMX: " + JSON.stringify(dmx));
 });
-
-console.log("connecting");
 
 client.on("connect", () => {
   client.subscribe("/Artnet/#");
-  console.log("connect");
 });
 
 client.on("message", (topic, message) => {
+  console.log("mqtt: " + topic + ": " + message);
   const data = message.toString("utf8");
-  //console.log("msg:");
-  //console.log(topic + " " + data);
   const topicitems = topic.split("/");
-  //console.log(topicitems);
   var cmd = topicitems[topicitems.length - 1];
   const channel = topicitems[2];
   if (cmd === channel) {
-    cmd = "value";
-    sender.prepChannel(channel, data);
+    cmd = "target";
   }
-  console.log(channel + ": " + cmd + " " + data);
-
   dmx[channel][cmd] = data;
 });
 
 setInterval(() => {
+  var sendneeded = false;
   dmx.forEach((task, channel) => {
     if ("target" in task && task.target <= 255 && task.target >= 0) {
       const target = Number(task.target);
-      if ("value" in task && "dimspeed" in task) {
-        var value = 0;
+      if ("dimspeed" in task) {
+        var value = target;
+        if ("value" in task) {
+          value = Number(task.value);
+        }
         if ("realvalue" in task) {
           value = Number(task.realvalue);
-        } else {
-          value = Number(task.value);
         }
         const dimstep = 2560 / Number(task.dimspeed);
         var setvalue = value;
@@ -84,11 +88,15 @@ setInterval(() => {
         }
         task.realvalue = setvalue;
         sender.prepChannel(channel, Math.round(setvalue));
+        sendneeded = true;
       } else {
         sender.prepChannel(channel, target);
+        sendneeded = true;
         delete task.target;
       }
+    } else if ("value" in task) {
+      sender.prepChannel(channel, task.value);
     }
   });
-  sender.transmit();
+  if (sendneeded) sender.transmit();
 }, 10);
