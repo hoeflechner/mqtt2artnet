@@ -1,0 +1,1 @@
+docker run -d --network host --name mqtt2artnet mqtt2artnet
